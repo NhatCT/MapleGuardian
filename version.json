@@ -1,6 +1,6 @@
 {
-  "version": "2.0.0",
+  "version": "2.1.0",
   "downloadUrl": "https://raw.githubusercontent.com/NhatCT/MapleGuardian/main/Release/MapleGuardian_v2_Portable.zip",
-  "changelog": "Bản phát hành V2.0.0 chính thức với Bảo vệ 3 lớp Zero-Leak và Soi IP IDC/Residential.",
+  "changelog": "Cập nhật V2.1.0: Logo không viền mới cực đẹp, biểu tượng Taskbar/System Tray trong suốt chuẩn hiện đại!",
   "mandatory": false
 }

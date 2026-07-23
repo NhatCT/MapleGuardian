@@ -77,20 +77,16 @@
             <!-- Header Section                                      -->
             <!-- ═══════════════════════════════════════════════════ -->
             <StackPanel Grid.Row="1" Margin="24,2,24,10">
-                <!-- App Logo Image -->
-                <Border Width="64" Height="64"
-                        CornerRadius="16"
-                        HorizontalAlignment="Center"
-                        Margin="0,0,0,8"
-                        BorderBrush="{StaticResource BorderSubtleBrush}"
-                        BorderThickness="1">
-                    <Border.Effect>
-                        <DropShadowEffect Color="#FF000000" BlurRadius="12" ShadowDepth="2" Opacity="0.4"/>
-                    </Border.Effect>
-                    <Border.Background>
-                        <ImageBrush ImageSource="Resources/logo.png" Stretch="UniformToFill"/>
-                    </Border.Background>
-                </Border>
+                <!-- App Logo Image (Frameless Transparent Emblem) -->
+                <Image Source="Resources/logo_clean.png"
+                       Width="68" Height="68"
+                       HorizontalAlignment="Center"
+                       Margin="0,0,0,8"
+                       RenderOptions.BitmapScalingMode="HighQuality">
+                    <Image.Effect>
+                        <DropShadowEffect Color="#FF000000" BlurRadius="10" ShadowDepth="2" Opacity="0.5"/>
+                    </Image.Effect>
+                </Image>
 
                 <!-- App Name -->
                 <TextBlock Text="Maple Guardian"
