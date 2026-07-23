@@ -1,6 +1,6 @@
 {
-  "version": "2.2.0",
+  "version": "2.2.1",
   "downloadUrl": "https://raw.githubusercontent.com/NhatCT/MapleGuardian/main/Release/MapleGuardian_v2_Portable.zip",
-  "changelog": "Cập nhật V2.2.0: Phản hồi Kill Switch siêu tốc dưới 0.2s, xem Log trực tiếp trong App, tự động dò tìm SoftEther VPN, sửa lỗi thông báo Windows và nâng cấp icon khay hệ thống sắc nét!",
+  "changelog": "Fix firewall COM API error, fix VPN reconnect race condition, block game traffic only",
   "mandatory": false
 }
