@@ -1,0 +1,8 @@
+e:\MapleGuardian\Release\MapleGuardian_v2_Portable\MapleGuardian.pdb
+e:\MapleGuardian\Release\MapleGuardian_v2_Portable\appsettings.json
+e:\MapleGuardian\Release\MapleGuardian_v2_Portable\D3DCompiler_47_cor3.dll
+e:\MapleGuardian\Release\MapleGuardian_v2_Portable\PenImc_cor3.dll
+e:\MapleGuardian\Release\MapleGuardian_v2_Portable\PresentationNative_cor3.dll
+e:\MapleGuardian\Release\MapleGuardian_v2_Portable\vcruntime140_cor3.dll
+e:\MapleGuardian\Release\MapleGuardian_v2_Portable\wpfgfx_cor3.dll
+e:\MapleGuardian\Release\MapleGuardian_v2_Portable\MapleGuardian.exe
