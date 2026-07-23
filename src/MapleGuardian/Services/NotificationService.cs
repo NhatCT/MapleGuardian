@@ -1,4 +1,5 @@
 using System.Windows;
+using Hardcodet.Wpf.TaskbarNotification;
 
 namespace MapleGuardian.Services;
 
@@ -9,7 +10,7 @@ namespace MapleGuardian.Services;
 public class NotificationService
 {
     private readonly LogService _log;
-    private System.Windows.Forms.NotifyIcon? _notifyIcon;
+    private TaskbarIcon? _trayIcon;
 
     public NotificationService(LogService log)
     {
@@ -17,11 +18,11 @@ public class NotificationService
     }
 
     /// <summary>
-    /// Set the NotifyIcon reference for balloon tips
+    /// Set the TaskbarIcon reference for balloon tips
     /// </summary>
-    public void SetNotifyIcon(System.Windows.Forms.NotifyIcon icon)
+    public void SetTaskbarIcon(TaskbarIcon icon)
     {
-        _notifyIcon = icon;
+        _trayIcon = icon;
     }
 
     /// <summary>
@@ -31,7 +32,7 @@ public class NotificationService
     {
         ShowBalloon("⚠️ VPN Disconnected!",
             "Firewall rules activated — game traffic BLOCKED.\nAttempting to reconnect...",
-            System.Windows.Forms.ToolTipIcon.Warning);
+            BalloonIcon.Warning);
         _log.Info("Notification", "VPN lost notification sent");
     }
 
@@ -42,7 +43,7 @@ public class NotificationService
     {
         ShowBalloon("✅ VPN Reconnected!",
             "Connection restored — game traffic unblocked.",
-            System.Windows.Forms.ToolTipIcon.Info);
+            BalloonIcon.Info);
         _log.Info("Notification", "VPN reconnected notification sent");
     }
 
@@ -53,7 +54,7 @@ public class NotificationService
     {
         ShowBalloon("❌ VPN Reconnection Failed!",
             "Max retry attempts reached — game remains blocked.\nCheck VPN connection manually.",
-            System.Windows.Forms.ToolTipIcon.Error);
+            BalloonIcon.Error);
         _log.Warning("Notification", "Reconnect failed notification sent");
     }
 
@@ -62,22 +63,22 @@ public class NotificationService
     /// </summary>
     public void NotifyInfo(string title, string message)
     {
-        ShowBalloon(title, message, System.Windows.Forms.ToolTipIcon.Info);
+        ShowBalloon(title, message, BalloonIcon.Info);
     }
 
     /// <summary>
     /// Show balloon notification via system tray
     /// </summary>
-    private void ShowBalloon(string title, string text, System.Windows.Forms.ToolTipIcon icon)
+    private void ShowBalloon(string title, string text, BalloonIcon icon)
     {
         try
         {
-            if (_notifyIcon != null)
+            if (_trayIcon != null)
             {
-                _notifyIcon.BalloonTipTitle = title;
-                _notifyIcon.BalloonTipText = text;
-                _notifyIcon.BalloonTipIcon = icon;
-                _notifyIcon.ShowBalloonTip(5000);
+                System.Windows.Application.Current?.Dispatcher.Invoke(() =>
+                {
+                    _trayIcon.ShowBalloonTip(title, text, icon);
+                });
             }
         }
         catch (Exception ex)

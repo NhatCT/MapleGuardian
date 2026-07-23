@@ -11,7 +11,7 @@
     <ApplicationIcon>Resources\app_icon.ico</ApplicationIcon>
     <RootNamespace>MapleGuardian</RootNamespace>
     <AssemblyName>MapleGuardian</AssemblyName>
-    <Version>2.1.0</Version>
+    <Version>2.2.0</Version>
     <Authors>MapleGuardian</Authors>
     <Description>Professional VPN Kill Switch for Maple Planet</Description>
   </PropertyGroup>

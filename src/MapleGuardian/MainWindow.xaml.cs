@@ -18,6 +18,34 @@ public partial class MainWindow : Window
         _viewModel = viewModel;
         DataContext = _viewModel;
 
+        _viewModel.LogEntries.CollectionChanged += (s, e) =>
+        {
+            if (_viewModel.IsLogViewerOpen)
+            {
+                Dispatcher.InvokeAsync(() =>
+                {
+                    if (LogListBox.Items.Count > 0)
+                    {
+                        LogListBox.ScrollIntoView(LogListBox.Items[LogListBox.Items.Count - 1]);
+                    }
+                });
+            }
+        };
+
+        _viewModel.PropertyChanged += (s, e) =>
+        {
+            if (e.PropertyName == nameof(MainViewModel.IsLogViewerOpen) && _viewModel.IsLogViewerOpen)
+            {
+                Dispatcher.InvokeAsync(() =>
+                {
+                    if (LogListBox.Items.Count > 0)
+                    {
+                        LogListBox.ScrollIntoView(LogListBox.Items[LogListBox.Items.Count - 1]);
+                    }
+                });
+            }
+        };
+
         Loaded += MainWindow_Loaded;
     }
 

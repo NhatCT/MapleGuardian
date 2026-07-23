@@ -1,4 +1,5 @@
 using System.Windows;
+using System.ComponentModel;
 using Hardcodet.Wpf.TaskbarNotification;
 using Microsoft.Extensions.Configuration;
 using MapleGuardian.Models;
@@ -14,12 +15,23 @@ namespace MapleGuardian;
 /// </summary>
 public partial class App : Application
 {
+    private static System.Threading.Mutex? _appMutex;
     private TaskbarIcon? _trayIcon;
     private MainWindow? _mainWindow;
     private MainViewModel? _viewModel;
 
     protected override void OnStartup(StartupEventArgs e)
     {
+        const string mutexName = "Global\\MapleGuardianSingleInstanceMutex";
+        _appMutex = new System.Threading.Mutex(true, mutexName, out bool createdNew);
+
+        if (!createdNew)
+        {
+            System.Windows.MessageBox.Show("Maple Guardian is already running in the system tray.", "Maple Guardian", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+            Shutdown();
+            return;
+        }
+
         base.OnStartup(e);
 
         // Load configuration
@@ -33,6 +45,22 @@ public partial class App : Application
 
         // Setup system tray icon
         SetupTrayIcon();
+        if (_trayIcon != null)
+        {
+            _viewModel.SetTaskbarIcon(_trayIcon);
+        }
+
+        // Subscribe to property changes to update the application and tray icons
+        _viewModel.PropertyChanged += (sender, args) =>
+        {
+            if (args.PropertyName == nameof(MainViewModel.IsVpnConnected) || args.PropertyName == nameof(MainViewModel.VpnStatusText))
+            {
+                UpdateAppIconsBasedOnStatus();
+            }
+        };
+
+        // Initialize icon state
+        UpdateAppIconsBasedOnStatus();
 
         // Check if started with --minimized flag (auto-start with Windows)
         bool startMinimized = e.Args.Contains("--minimized");
@@ -83,26 +111,7 @@ public partial class App : Application
             Visibility = Visibility.Visible
         };
 
-        try
-        {
-            var iconUri = new Uri("pack://application:,,,/Resources/app_icon.ico", UriKind.Absolute);
-            var streamInfo = System.Windows.Application.GetResourceStream(iconUri);
-            if (streamInfo != null)
-            {
-                _trayIcon.Icon = new System.Drawing.Icon(streamInfo.Stream);
-            }
-            else if (!string.IsNullOrEmpty(Environment.ProcessPath))
-            {
-                _trayIcon.Icon = System.Drawing.Icon.ExtractAssociatedIcon(Environment.ProcessPath);
-            }
-        }
-        catch
-        {
-            if (!string.IsNullOrEmpty(Environment.ProcessPath))
-            {
-                try { _trayIcon.Icon = System.Drawing.Icon.ExtractAssociatedIcon(Environment.ProcessPath); } catch { }
-            }
-        }
+        UpdateTrayIcon("app_icon.ico");
 
         // Create context menu
         var contextMenu = new System.Windows.Controls.ContextMenu();
@@ -147,6 +156,72 @@ public partial class App : Application
     }
 
     /// <summary>
+    /// Updates the application tray and window icons based on the current VPN connection status.
+    /// </summary>
+    private void UpdateAppIconsBasedOnStatus()
+    {
+        if (_viewModel == null) return;
+
+        string iconName = "app_icon.ico";
+        if (_viewModel.VpnStatusText == "Connected")
+        {
+            iconName = "icon_connected.ico";
+        }
+        else if (_viewModel.VpnStatusText == "LOST" || _viewModel.VpnStatusText == "Disconnected")
+        {
+            iconName = "icon_disconnected.ico";
+        }
+
+        // Update Tray Icon
+        UpdateTrayIcon(iconName);
+
+        // Update MainWindow Icon
+        if (_mainWindow != null)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                try
+                {
+                    var iconUri = new Uri($"pack://application:,,,/Resources/{iconName}", UriKind.Absolute);
+                    _mainWindow.Icon = System.Windows.Media.Imaging.BitmapFrame.Create(iconUri);
+                }
+                catch
+                {
+                    // Ignore
+                }
+            });
+        }
+    }
+
+    /// <summary>
+    /// Updates the icon of the system tray icon.
+    /// </summary>
+    private void UpdateTrayIcon(string iconName)
+    {
+        if (_trayIcon == null) return;
+        try
+        {
+            var iconUri = new Uri($"pack://application:,,,/Resources/{iconName}", UriKind.Absolute);
+            var streamInfo = System.Windows.Application.GetResourceStream(iconUri);
+            if (streamInfo != null)
+            {
+                _trayIcon.Icon = new System.Drawing.Icon(streamInfo.Stream);
+            }
+            else if (iconName == "app_icon.ico" && !string.IsNullOrEmpty(Environment.ProcessPath))
+            {
+                _trayIcon.Icon = System.Drawing.Icon.ExtractAssociatedIcon(Environment.ProcessPath);
+            }
+        }
+        catch
+        {
+            if (iconName == "app_icon.ico" && !string.IsNullOrEmpty(Environment.ProcessPath))
+            {
+                try { _trayIcon.Icon = System.Drawing.Icon.ExtractAssociatedIcon(Environment.ProcessPath); } catch { }
+            }
+        }
+    }
+
+    /// <summary>
     /// Create dark-themed style for tray context menu
     /// </summary>
     private static System.Windows.Style CreateTrayMenuStyle()
@@ -186,6 +261,13 @@ public partial class App : Application
     {
         _trayIcon?.Dispose();
         _viewModel?.Dispose();
+
+        if (_appMutex != null)
+        {
+            try { _appMutex.ReleaseMutex(); } catch { }
+            _appMutex.Dispose();
+        }
+
         base.OnExit(e);
     }
 }

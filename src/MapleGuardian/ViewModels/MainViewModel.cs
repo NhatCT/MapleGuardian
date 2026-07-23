@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Media;
+using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MapleGuardian.Models;
@@ -71,6 +72,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty] private bool _startWithWindows;
     [ObservableProperty] private string _uptimeText = "0:00:00";
 
+    [ObservableProperty] private bool _isLogViewerOpen;
+    public ObservableCollection<LogEntry> LogEntries { get; } = new();
+
     private DateTime _startTime;
     private Timer? _uptimeTimer;
 
@@ -93,6 +97,13 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _startupManager = new StartupManager(_logService);
         _processMonitor = new ProcessMonitorService(config, _logService);
         _updateService = new UpdateService(config, _logService);
+
+        // Load existing logs and subscribe to log events
+        foreach (var entry in _logService.GetRecentEntries())
+        {
+            LogEntries.Add(entry);
+        }
+        _logService.LogAdded += OnLogAdded;
 
         // Wire up events
         _vpnMonitor.StatusChanged += OnVpnStatusChanged;
@@ -428,8 +439,53 @@ public partial class MainViewModel : ObservableObject, IDisposable
         await _softEtherService.ReconnectAsync();
     }
 
+    private void OnLogAdded(object? sender, LogEntry entry)
+    {
+        Application.Current?.Dispatcher.Invoke(() =>
+        {
+            LogEntries.Add(entry);
+            if (LogEntries.Count > 500)
+            {
+                LogEntries.RemoveAt(0);
+            }
+        });
+    }
+
     [RelayCommand]
     private void OpenLogs()
+    {
+        IsLogViewerOpen = true;
+    }
+
+    [RelayCommand]
+    private void CloseLogViewer()
+    {
+        IsLogViewerOpen = false;
+    }
+
+    [RelayCommand]
+    private void ClearLogs()
+    {
+        LogEntries.Clear();
+    }
+
+    [RelayCommand]
+    private void CopyLogs()
+    {
+        try
+        {
+            var text = string.Join(Environment.NewLine, LogEntries.Select(e => e.ToString()));
+            System.Windows.Clipboard.SetText(text);
+            _notificationService.NotifyInfo("📋 Logs Copied", "Log entries copied to clipboard.");
+        }
+        catch (Exception ex)
+        {
+            _logService.Error("User", "Failed to copy logs to clipboard", ex);
+        }
+    }
+
+    [RelayCommand]
+    private void OpenLogsFolder()
     {
         try
         {
@@ -463,6 +519,12 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _logService.Info("App", "Exit requested by user");
         Dispose();
         Application.Current?.Shutdown();
+    }
+
+    /// <summary>Set TaskbarIcon reference for notification balloon tips</summary>
+    public void SetTaskbarIcon(Hardcodet.Wpf.TaskbarNotification.TaskbarIcon trayIcon)
+    {
+        _notificationService.SetTaskbarIcon(trayIcon);
     }
 
     // ═══════════════════════════════════════════════════════

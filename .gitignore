@@ -6,5 +6,6 @@
 *.dll
 *.pdb
 *.zip
+!Release/MapleGuardian_v2_Portable.zip
 *.log
 temp_update/

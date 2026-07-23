@@ -44,7 +44,8 @@ public class SoftEtherService
 
         try
         {
-            _log.Info("SoftEther", $"Starting reconnection (max {_config.MaxReconnectAttempts} attempts)");
+            string accountName = await ResolveAccountNameAsync();
+            _log.Info("SoftEther", $"Starting reconnection for account '{accountName}' (max {_config.MaxReconnectAttempts} attempts)");
 
             for (int attempt = 1; attempt <= _config.MaxReconnectAttempts; attempt++)
             {
@@ -57,17 +58,17 @@ public class SoftEtherService
                 _log.Info("SoftEther", $"Reconnect attempt {attempt}/{_config.MaxReconnectAttempts}...");
 
                 // Disconnect first
-                await ExecuteVpnCmd($"AccountDisconnect {_config.SoftEtherAccountName}");
+                await ExecuteVpnCmd($"AccountDisconnect {accountName}");
                 await Task.Delay(1000, _reconnectCts.Token);
 
                 // Connect
-                var connectResult = await ExecuteVpnCmd($"AccountConnect {_config.SoftEtherAccountName}");
+                var connectResult = await ExecuteVpnCmd($"AccountConnect {accountName}");
 
                 if (connectResult.Success)
                 {
                     // Wait a bit then verify
                     await Task.Delay(3000, _reconnectCts.Token);
-                    var status = await GetAccountStatus();
+                    var status = await GetAccountStatus(accountName);
 
                     if (status.Contains("Connected", StringComparison.OrdinalIgnoreCase))
                     {
@@ -118,11 +119,48 @@ public class SoftEtherService
     }
 
     /// <summary>
+    /// Resolve account name — auto-detect from SoftEther if configured name doesn't match
+    /// </summary>
+    public async Task<string> ResolveAccountNameAsync()
+    {
+        string configured = _config.SoftEtherAccountName;
+        var listResult = await ExecuteVpnCmd("AccountList");
+        if (!listResult.Success || string.IsNullOrWhiteSpace(listResult.Output))
+            return configured;
+
+        var lines = listResult.Output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+        var accounts = new List<string>();
+        foreach (var line in lines)
+        {
+            if (line.Contains("VPN Connection Setting Name") || line.Contains("Setting Name"))
+            {
+                var parts = line.Split('|');
+                if (parts.Length >= 2)
+                {
+                    accounts.Add(parts[1].Trim());
+                }
+            }
+        }
+
+        if (accounts.Count > 0)
+        {
+            if (accounts.Exists(a => string.Equals(a, configured, StringComparison.OrdinalIgnoreCase)))
+                return configured;
+
+            _log.Info("SoftEther", $"Configured account '{configured}' not found. Auto-detected account: '{accounts[0]}'");
+            return accounts[0];
+        }
+
+        return configured;
+    }
+
+    /// <summary>
     /// Get current VPN account status via vpncmd
     /// </summary>
-    public async Task<string> GetAccountStatus()
+    public async Task<string> GetAccountStatus(string? accountName = null)
     {
-        var result = await ExecuteVpnCmd($"AccountStatusGet {_config.SoftEtherAccountName}");
+        accountName ??= await ResolveAccountNameAsync();
+        var result = await ExecuteVpnCmd($"AccountStatusGet {accountName}");
         return result.Output;
     }
 
