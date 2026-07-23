@@ -232,12 +232,16 @@ public class VpnMonitorService : IDisposable
     }
 
     /// <summary>
-    /// Manually set status to Reconnecting (called by reconnect service)
+    /// Manually set status to Reconnecting (called by reconnect service).
+    /// No-op if VPN is already Connected (avoids race with real-time monitor).
     /// </summary>
     public void SetReconnecting()
     {
         lock (_statusLock)
         {
+            // Don't reset to Reconnecting if already Connected (real-time monitor detected a reconnect)
+            if (_currentStatus == VpnStatus.Connected)
+                return;
             var old = _currentStatus;
             _currentStatus = VpnStatus.Reconnecting;
             StatusChanged?.Invoke(this, new VpnStatusChangedEventArgs(old, VpnStatus.Reconnecting));
@@ -245,12 +249,17 @@ public class VpnMonitorService : IDisposable
     }
 
     /// <summary>
-    /// Reset status to Disconnected (called when reconnect completes unsuccessfully)
+    /// Reset status to Disconnected (called when reconnect completes unsuccessfully).
+    /// No-op if VPN is already Connected (avoids race with OS reconnecting the adapter).
     /// </summary>
     public void SetDisconnected()
     {
         lock (_statusLock)
         {
+            // Don't overwrite Connected with Disconnected — OS may have reconnected the adapter
+            // independently of SoftEther, and the real-time loop already updated the status.
+            if (_currentStatus == VpnStatus.Connected)
+                return;
             var old = _currentStatus;
             _currentStatus = VpnStatus.Disconnected;
             StatusChanged?.Invoke(this, new VpnStatusChangedEventArgs(old, VpnStatus.Disconnected));

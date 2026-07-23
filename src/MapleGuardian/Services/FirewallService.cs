@@ -31,7 +31,7 @@ public class FirewallService
     public bool EnableRules()
     {
         _log.Warning("Firewall", "🛡️ Enabling firewall rules — BLOCKING game traffic");
-        bool success = SetRulesEnabled(true);
+        bool success = SetRulesBlocking(true);
         if (success)
         {
             _currentStatus = FirewallStatus.Enabled;
@@ -46,7 +46,7 @@ public class FirewallService
     public bool DisableRules()
     {
         _log.Info("Firewall", "✅ Disabling firewall rules — ALLOWING game traffic");
-        bool success = SetRulesEnabled(false);
+        bool success = SetRulesBlocking(false);
         if (success)
         {
             _currentStatus = FirewallStatus.Disabled;
@@ -124,7 +124,7 @@ public class FirewallService
         return result;
     }
 
-    private bool SetRulesEnabled(bool blockAll)
+    private bool SetRulesBlocking(bool blockAll)
     {
         try
         {
@@ -143,18 +143,10 @@ public class FirewallService
                 {
                     if (string.Equals(rule.Name, ruleName, StringComparison.OrdinalIgnoreCase))
                     {
-                        if (blockAll)
-                        {
-                            // Full lockdown: Block on ALL interfaces
-                            rule.InterfaceTypes = "All";
-                            rule.Enabled = true;
-                        }
-                        else
-                        {
-                            // Proactive Hard-Lock: Block physical LAN & Wi-Fi 24/7, allow VPN (RemoteAccess)
-                            rule.InterfaceTypes = "LAN, Wireless";
-                            rule.Enabled = true;
-                        }
+                        // Only toggle Enabled — do NOT change InterfaceTypes
+                        // InterfaceTypes must stay as configured (e.g. "Lan, Wireless")
+                        // so ONLY game traffic is blocked, not all internet traffic.
+                        rule.Enabled = blockAll;
                         matchedRules++;
                         break;
                     }

@@ -186,6 +186,13 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         _logService.Info("Guardian", "✅ VPN connected — flushing DNS and disabling firewall rules");
 
+        // Cancel any ongoing SoftEther reconnection to avoid race conditions
+        if (_softEtherService.IsReconnecting)
+        {
+            _logService.Info("Guardian", "VPN reconnected during SoftEther retry — cancelling reconnection loop");
+            _softEtherService.CancelReconnect();
+        }
+
         // Flush DNS Cache to prevent DNS Leak
         _networkChecker.FlushDnsCache();
 
@@ -202,6 +209,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             _notificationService.NotifyVpnReconnected();
         }
 
+        IsReconnecting = false;
         StatusBarText = "VPN connected — monitoring active";
         StatusBarColor = new SolidColorBrush(Color.FromRgb(63, 185, 80));
     }
@@ -249,9 +257,21 @@ public partial class MainViewModel : ObservableObject, IDisposable
             }
             else
             {
-                StatusBarText = "❌ Reconnection failed";
-                StatusBarColor = new SolidColorBrush(Color.FromRgb(248, 81, 73));
-                _vpnMonitor.SetDisconnected();
+                // Only force disconnect status if VPN isn't already connected
+                // (avoids race where OS reconnects the adapter before SoftEther finishes)
+                if (_vpnMonitor.CurrentStatus != VpnStatus.Connected)
+                {
+                    StatusBarText = "❌ Reconnection failed";
+                    StatusBarColor = new SolidColorBrush(Color.FromRgb(248, 81, 73));
+                    _vpnMonitor.SetDisconnected();
+                }
+                else
+                {
+                    _logService.Info("SoftEther",
+                        "SoftEther retries exhausted but VPN already connected — ignoring failure");
+                    StatusBarText = "VPN connected — monitoring active";
+                    StatusBarColor = new SolidColorBrush(Color.FromRgb(63, 185, 80));
+                }
             }
         });
     }
